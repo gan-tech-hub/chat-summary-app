@@ -96,7 +96,7 @@ export default function ChatPage() {
             const formData = new FormData();
             formData.append("file", file);
 
-            const res = await fetch("http://127.0.0.1:8000/pdf-summary", {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pdf-summary`, {
                 method: "POST",
                 body: formData,
             });
