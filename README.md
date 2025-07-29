@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📦 FastAPI GPT App
 
-## Getting Started
+FastAPI + OpenAI API を活用したチャット＆PDF要約APIサーバーです。  
+フロントエンド（Next.js）は別リポジトリで構成しています。
 
-First, run the development server:
+---
+
+## 🚀 アプリ概要
+
+| 項目 | 内容 |
+|------|------|
+| バックエンド | FastAPI |
+| 機能 | - チャットAPI<br>- PDF要約API |
+| 外部API | OpenAI API |
+| フロントエンド | [next-fastapi-gpt（Vercel）](https://chat-summary-app.vercel.app) |
+| APIドキュメント | [Swagger UI](https://chat-summary-backend.onrender.com/docs) |
+
+---
+
+## 🧩 使用技術
+
+- Python 3.11+
+- FastAPI
+- Uvicorn
+- OpenAI Python SDK
+- PyMuPDF（PDF解析用）
+
+---
+
+## 🔧 セットアップ手順（ローカル）
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 仮想環境の作成・有効化
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 依存関係のインストール
+pip install -r requirements.txt
+
+# .env ファイルの作成（OpenAI APIキーなど）
+echo "OPENAI_API_KEY=your-api-key" > .env
+
+# サーバー起動
+uvicorn main:app --reload
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🌐 APIエンドポイント
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| メソッド | エンドポイント        | 説明                   |
+| ---- | -------------- | -------------------- |
+| POST | `/chat`        | ChatGPT API による応答を返す |
+| POST | `/pdf-summary` | アップロードした PDF の要約を生成  |
 
-## Learn More
+※ 詳細は `/docs` を参照。
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📡 デプロイ情報
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| 環境           | サービス   | URL                                                                                    |
+| ------------- | ------ | -------------------------------------------------------------------------------------- |
+| Backend (API) | Render | [https://chat-summary-backend.onrender.com](https://chat-summary-backend.onrender.com) |
+| Frontend      | Vercel | [https://chat-summary-app.vercel.app](https://chat-summary-app.vercel.app)             |
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🔐 環境変数（`.env`）
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| 変数名              | 説明           |
+| ---------------- | ------------ |
+| `OPENAI_API_KEY` | OpenAIのAPIキー |
+
+---
+
+## 🗂 ディレクトリ構成
+
+```bash
+fastapi-gpt-app/
+├── .gitignore
+├── main.py
+├── requirements.txt
+├── .env
+```
+
+---
+
+## 👤 作者
+
+* 桜庭祐斗
+
+---
+
+## 📝 補足
+
+* フロントエンドとの連携が必要です。Next.js側のリポジトリに環境変数 `NEXT_PUBLIC_API_URL` を設定してください。
+* フロント実装の詳細は別リポジトリをご参照ください。
+
+```
