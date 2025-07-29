@@ -1,100 +1,102 @@
-# 📦 FastAPI GPT App
+# 💬 Chat Summary App (Frontend)
 
-FastAPI + OpenAI API を活用したチャット＆PDF要約APIサーバーです。  
-フロントエンド（Next.js）は別リポジトリで構成しています。
+OpenAI API × FastAPI バックエンドと連携した、チャット＆PDF要約Webアプリのフロントエンドです。
 
 ---
 
-## 🚀 アプリ概要
+## 🌐 アプリ概要
 
 | 項目 | 内容 |
 |------|------|
-| バックエンド | FastAPI |
-| 機能 | - チャットAPI<br>- PDF要約API |
-| 外部API | OpenAI API |
-| フロントエンド | [next-fastapi-gpt（Vercel）](https://chat-summary-app.vercel.app) |
-| APIドキュメント | [Swagger UI](https://chat-summary-backend.onrender.com/docs) |
+| フロントエンド | Next.js（App Router） |
+| バックエンド | [FastAPI（Render）](https://chat-summary-backend.onrender.com) |
+| デモURL | [https://chat-summary-app.vercel.app](https://chat-summary-app.vercel.app) |
+| 機能 | - ChatGPT風チャット機能<br>- PDFをアップロードして要約表示 |
 
 ---
 
-## 🧩 使用技術
+## 🧪 使用技術
 
-- Python 3.11+
-- FastAPI
-- Uvicorn
-- OpenAI Python SDK
-- PyMuPDF（PDF解析用）
+- Next.js 14
+- TypeScript
+- Tailwind CSS
+- Shadcn/ui
+- React Hook Form
+- フロントバック連携：`fetch()`（API叩き）
 
 ---
 
-## 🔧 セットアップ手順（ローカル）
+## 🚀 セットアップ手順（ローカル）
 
 ```bash
-# 仮想環境の作成・有効化
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# 依存パッケージのインストール
+npm install
 
-# 依存関係のインストール
-pip install -r requirements.txt
+# .env.local を作成（環境変数を設定）
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
 
-# .env ファイルの作成（OpenAI APIキーなど）
-echo "OPENAI_API_KEY=your-api-key" > .env
-
-# サーバー起動
-uvicorn main:app --reload
+# 開発サーバー起動
+npm run dev
 ```
 
 ---
 
-## 🌐 APIエンドポイント
+## 🔐 環境変数（`.env.local`）
 
-| メソッド | エンドポイント        | 説明                   |
-| ---- | -------------- | -------------------- |
-| POST | `/chat`        | ChatGPT API による応答を返す |
-| POST | `/pdf-summary` | アップロードした PDF の要約を生成  |
+| 変数名                   | 説明                                                          |
+| --------------------- | ----------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL` | FastAPI側のURL（例：`https://chat-summary-backend.onrender.com`） |
 
-※ 詳細は `/docs` を参照。
-
----
-
-## 📡 デプロイ情報
-
-| 環境           | サービス   | URL                                                                                    |
-| ------------- | ------ | -------------------------------------------------------------------------------------- |
-| Backend (API) | Render | [https://chat-summary-backend.onrender.com](https://chat-summary-backend.onrender.com) |
-| Frontend      | Vercel | [https://chat-summary-app.vercel.app](https://chat-summary-app.vercel.app)             |
+※末尾に「スラッシュ `/`」を付けないよう注意！
 
 ---
 
-## 🔐 環境変数（`.env`）
+## 🧭 機能一覧
 
-| 変数名              | 説明           |
-| ---------------- | ------------ |
-| `OPENAI_API_KEY` | OpenAIのAPIキー |
+### 🗨️ ChatGPT風チャット機能
+
+* テキストを送信すると、OpenAI API（GPT）を経由して応答が返ってきます。
+* ローディング中はスピナー表示。
+
+### 📄 PDF要約機能
+
+* PDFをアップロードすると、OpenAI APIが要約を生成。
+* サーバー側は `/pdf-summary` エンドポイントを使用。
 
 ---
 
-## 🗂 ディレクトリ構成
+## 🔧 ディレクトリ構成（主なファイル）
 
 ```bash
-fastapi-gpt-app/
-├── .gitignore
-├── main.py
-├── requirements.txt
-├── .env
+next-fastapi-gpt/
+├── app/
+│   ├── page.tsx       # メインUI
+│   ├── components/    # チャットUIなどのコンポーネント
+├── public/            # PDFアップロード用UI
+├── styles/            # グローバルCSS
+├── .env.local         # 環境変数
+├── tailwind.config.ts
+├── tsconfig.json
+└── README.md
 ```
+
+---
+
+## 🌍 公開URL
+
+* フロントエンド（Vercel）：[https://chat-summary-app.vercel.app](https://chat-summary-app.vercel.app)
+* バックエンド（Render）：[https://chat-summary-backend.onrender.com](https://chat-summary-backend.onrender.com)
 
 ---
 
 ## 👤 作者
 
-* 桜庭祐斗
+* 桜庭祐斗（副業エンジニア挑戦中💻🔥）
 
 ---
 
-## 📝 補足
+## ✅ 備考
 
-* フロントエンドとの連携が必要です。Next.js側のリポジトリに環境変数 `NEXT_PUBLIC_API_URL` を設定してください。
-* フロント実装の詳細は別リポジトリをご参照ください。
+* バックエンドとの連携が前提のアプリです。
+* 開発環境ではFastAPIをローカル起動し、環境変数で切り替えてください。
 
-```
