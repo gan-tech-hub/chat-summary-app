@@ -10,7 +10,7 @@ OpenAI API × FastAPI バックエンドと連携した、チャット＆PDF要�
 |------|------|
 | フロントエンド | Next.js（App Router） |
 | バックエンド | [FastAPI（Render）](https://chat-summary-backend.onrender.com) |
-| デモURL | [https://chat-summary-app.vercel.app](https://chat-summary-app.vercel.app) |
+| デモURL | [https://chat-summary-app.vercel.app/chat](https://chat-summary-app.vercel.app/chat) |
 | 機能 | - ChatGPT風チャット機能<br>- PDFをアップロードして要約表示 |
 
 ---
@@ -84,7 +84,7 @@ next-fastapi-gpt/
 
 ## 🌍 公開URL
 
-* フロントエンド（Vercel）：[https://chat-summary-app.vercel.app](https://chat-summary-app.vercel.app)
+* フロントエンド（Vercel）：[https://chat-summary-app.vercel.app/chat](https://chat-summary-app.vercel.app/chat)
 * バックエンド（Render）：[https://chat-summary-backend.onrender.com](https://chat-summary-backend.onrender.com)
 
 ---
@@ -99,4 +99,3 @@ next-fastapi-gpt/
 
 * バックエンドとの連携が前提のアプリです。
 * 開発環境ではFastAPIをローカル起動し、環境変数で切り替えてください。
-
