@@ -97,6 +97,21 @@ next-fastapi-gpt/
 
 ---
 
+## 📷 スクリーンショット例
+
+以下は画面のイメージ例です：
+
+* **チャットモード**
+<img width="615" height="822" alt="image" src="https://github.com/user-attachments/assets/f18c50cb-1d93-446d-926d-6f5b294e1981" />
+
+* **テキスト要約モード**
+<img width="615" height="831" alt="image" src="https://github.com/user-attachments/assets/9d4f7e16-0782-4b6e-b37c-d5930996ed55" />
+
+* **PDF要約モード**
+<img width="622" height="837" alt="image" src="https://github.com/user-attachments/assets/3bdfcd63-9da9-403d-8731-5722eb1b1f60" />
+
+---
+
 ## ✅ 備考
 
 * バックエンドとの連携が前提のアプリです。
