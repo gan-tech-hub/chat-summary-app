@@ -1,6 +1,18 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 
+const MAX_PDF_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
+type ApiResponse = {
+    success?: boolean;
+    data?: { message?: string } | null;
+    error?: { code?: string; message?: string } | null;
+};
+
+const getApiMessage = (data: ApiResponse, fallback: string) => {
+    return data.data?.message ?? data.error?.message ?? fallback;
+};
+
 export default function ChatPage() {
     const [input, setInput] = useState("");
     const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
@@ -30,7 +42,7 @@ export default function ChatPage() {
                     body: formData,
                 });
                 const data = await res.json();
-                const newAssistantMessage = { role: "assistant", content: data.summary };
+                const newAssistantMessage = { role: "assistant", content: getApiMessage(data, "PDF要約中にエラーが発生しました") };
                 setMessages([...messages, newAssistantMessage]);
             } catch (error) {
                 console.error(error);
@@ -63,7 +75,7 @@ export default function ChatPage() {
             });
 
             const data = await res.json();
-            const newAssistantMessage = { role: "assistant", content: data.response };
+            const newAssistantMessage = { role: "assistant", content: getApiMessage(data, "エラーが発生しました") };
             setMessages([...updatedMessages, newAssistantMessage]);
         } catch (error) {
             console.error(error);
@@ -90,6 +102,16 @@ export default function ChatPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        if (file.size > MAX_PDF_FILE_SIZE_BYTES) {
+            const errorMessage = {
+                role: "assistant",
+                content: "PDFファイルサイズが大きすぎます。10MB以下のPDFをアップロードしてください。",
+            };
+            setMessages((prev) => [...prev, errorMessage]);
+            e.target.value = "";
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -102,7 +124,7 @@ export default function ChatPage() {
             });
 
             const data = await res.json();
-            const newAssistantMessage = { role: "assistant", content: data.response };
+            const newAssistantMessage = { role: "assistant", content: getApiMessage(data, "PDF要約でエラーが発生しました") };
             setMessages((prev) => [...prev, newAssistantMessage]);
         } catch (error) {
             console.error(error);

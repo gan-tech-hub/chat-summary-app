@@ -1,118 +1,180 @@
-# 💬 Chat Summary App (Frontend)
+# AI Chat & PDF Summary Frontend
 
-OpenAI API × FastAPI バックエンドと連携した、チャット＆PDF要約Webアプリのフロントエンドです。
+Next.js と TypeScript で構築した、生成AIチャット・テキスト要約・PDF要約アプリのフロントエンドです。
 
----
+FastAPIバックエンドと連携し、OpenAI APIを利用したチャット応答、テキスト要約、PDF要約を画面から操作できます。OpenAI APIキーはバックエンド側でのみ管理し、フロントエンドには公開しません。
 
-## 🌐 アプリ概要
+## Features
 
-| 項目 | 内容 |
-|------|------|
-| フロントエンド | Next.js（App Router） |
-| バックエンド | [FastAPI（Render）](https://chat-summary-backend.onrender.com) |
-| デモURL | [https://chat-summary-app.vercel.app/chat](https://chat-summary-app.vercel.app/chat) |
-| 機能 | - ChatGPT風チャット機能<br>- PDFをアップロードして要約表示 |
+- チャットモード
+- テキスト要約モード
+- PDF要約モード
+- PDFアップロード
+- PDFファイルサイズの事前チェック
+- Backendから返された標準APIレスポンスの表示
+- エラーメッセージ表示
+- ローディングスピナー表示
 
----
+## Tech Stack
 
-## 🧪 使用技術
-
-- Next.js 14
+- Next.js 15
+- React 19
 - TypeScript
 - Tailwind CSS
-- Shadcn/ui
-- React Hook Form
-- フロントバック連携：`fetch()`（API叩き）
+- Fetch API
 
----
+## Architecture
 
-## 🚀 セットアップ手順（ローカル）
-
-```bash
-# 依存パッケージのインストール
-npm install
-
-# .env.local を作成（環境変数を設定）
-echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
-
-# 開発サーバー起動
-npm run dev
+```text
+Browser
+   |
+   v
+Next.js Frontend
+   |
+   | NEXT_PUBLIC_API_URL
+   v
+FastAPI Backend
+   |
+   v
+OpenAI API
 ```
 
----
+## Backend Integration
 
-## 🔐 環境変数（`.env.local`）
+Frontendは以下の環境変数を使ってFastAPI Backendへリクエストします。
 
-| 変数名                   | 説明                                                          |
-| --------------------- | ----------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL` | FastAPI側のURL（例：`https://chat-summary-backend.onrender.com`） |
+`.env.local`
 
-※末尾に「スラッシュ `/`」を付けないよう注意！
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
----
+末尾にスラッシュ `/` は付けません。
 
-## 🧭 機能一覧
+## API Response Handling
 
-### 🗨️ ChatGPT風チャット機能
+Backendは以下の標準形式でレスポンスを返します。
 
-* テキストを送信すると、OpenAI API（GPT）を経由して応答が返ってきます。
-* ローディング中はスピナー表示。
+成功時:
 
-### 📄 PDF要約機能
+```json
+{
+  "success": true,
+  "data": {
+    "message": "要約またはチャット応答本文"
+  },
+  "error": null
+}
+```
 
-* PDFをアップロードすると、OpenAI APIが要約を生成。
-* サーバー側は `/pdf-summary` エンドポイントを使用。
+エラー時:
 
----
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "PDF_FILE_TOO_LARGE",
+    "message": "PDFファイルサイズが大きすぎます。10MB以下のPDFをアップロードしてください。"
+  }
+}
+```
 
-## 🔧 ディレクトリ構成（主なファイル）
+Frontendでは `data.message` または `error.message` を表示します。
 
-```bash
-next-fastapi-gpt/
-├── app/
-│   ├── page.tsx       # メインUI
-│   ├── components/    # チャットUIなどのコンポーネント
-├── public/            # PDFアップロード用UI
-├── styles/            # グローバルCSS
-├── .env.local         # 環境変数
-├── tailwind.config.ts
+## PDF Upload Guard
+
+Frontend側でも、10MBを超えるPDFはバックエンドへ送信する前にブロックします。
+
+```text
+Max PDF file size: 10MB
+```
+
+これにより、大容量PDFを送信してバックエンド処理が重くなる前に、ユーザーへ分かりやすいエラーを表示します。
+
+## Directory Structure
+
+```text
+chat-summary-app/
+├── public/
+├── src/
+│   └── app/
+│       ├── chat/
+│       │   └── page.tsx
+│       ├── globals.css
+│       ├── layout.tsx
+│       └── page.tsx
+├── package.json
+├── package-lock.json
+├── next.config.ts
 ├── tsconfig.json
 └── README.md
 ```
 
----
+## Main Files
 
-## 🌍 公開URL
+| File | Responsibility |
+| --- | --- |
+| `src/app/chat/page.tsx` | チャットUI、モード切替、PDFアップロード、APIレスポンス表示 |
+| `src/app/layout.tsx` | Next.js App Routerの共通レイアウト |
+| `src/app/globals.css` | Tailwind CSSとグローバルスタイル |
+| `package.json` | scriptsと依存関係 |
 
-* フロントエンド（Vercel）：[https://chat-summary-app.vercel.app/chat](https://chat-summary-app.vercel.app/chat)
-* バックエンド（Render）：[https://chat-summary-backend.onrender.com](https://chat-summary-backend.onrender.com)
+## Local Setup
 
----
+Windows PowerShellでの起動例です。
 
-## 👤 作者
+```powershell
+cd C:\dev\GItHub\fastapi_app\chat-summary-app
+npm install
+Set-Content -Path .env.local -Value "NEXT_PUBLIC_API_URL=http://localhost:8000" -Encoding ascii
+npm run dev
+```
 
-* 桜庭祐斗
+起動後:
 
-[GitHub - gan-tech-hub](https://github.com/gan-tech-hub)
+```text
+http://localhost:3000/chat
+```
 
----
+Backendも別ターミナルで起動しておきます。
 
-## 📷 スクリーンショット例
+```powershell
+cd C:\dev\GItHub\fastapi_app\fastapi-gpt-app
+.\venv\Scripts\Activate.ps1
+uvicorn main:app --reload
+```
 
-以下は画面のイメージ例です：
+## Development Note
 
-* **チャットモード**
-<img width="615" height="822" alt="image" src="https://github.com/user-attachments/assets/f18c50cb-1d93-446d-926d-6f5b294e1981" />
+Codexサイドパネルなどで `npm` が認識されない場合は、Node.jsのPATHが通っていない可能性があります。すでに `node_modules` が存在する場合は、Node.jsからNext.jsを直接起動できます。
 
-* **テキスト要約モード**
-<img width="615" height="831" alt="image" src="https://github.com/user-attachments/assets/9d4f7e16-0782-4b6e-b37c-d5930996ed55" />
+```powershell
+cd C:\dev\GItHub\fastapi_app\chat-summary-app
+& "C:\Users\gan01\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe" .\node_modules\next\dist\bin\next dev
+```
 
-* **PDF要約モード**
-<img width="622" height="837" alt="image" src="https://github.com/user-attachments/assets/3bdfcd63-9da9-403d-8731-5722eb1b1f60" />
+## Operation Check
 
----
+- チャットモードで応答が表示される
+- テキスト要約モードで要約が表示される
+- PDF要約モードで短いPDFが要約される
+- 10MB超PDFでエラーが表示される
+- Backend停止時に通信エラーが表示される
 
-## ✅ 備考
+## Portfolio Highlights
 
-* バックエンドとの連携が前提のアプリです。
-* 開発環境ではFastAPIをローカル起動し、環境変数で切り替えてください。
+- Next.jsからFastAPI Backendを呼び出すフロントエンド実装
+- OpenAI APIキーをFrontendに持たせない安全な構成
+- Backendの標準APIレスポンス `success / data / error` に対応
+- PDFアップロード前のファイルサイズチェック
+- ユーザーに分かりやすいエラー表示とローディング表示
+
+## Future Improvements
+
+- PDFファイル名・サイズの表示
+- 要約中の詳細ステータス表示
+- 要約スタイル選択
+- 要約結果のコピー・ダウンロード
+- PDF内容への質問機能
+- UIデザインの改善
