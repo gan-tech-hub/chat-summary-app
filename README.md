@@ -1,59 +1,77 @@
 # AI Chat & PDF Summary Frontend
 
-Next.js と TypeScript で構築した、生成AIチャット・テキスト要約・PDF要約アプリのフロントエンドです。
+Next.js / TypeScriptで構築した、OpenAI API連携アプリのフロントエンドです。
 
-FastAPIバックエンドと連携し、OpenAI APIを利用したチャット応答、テキスト要約、PDF要約を画面から操作できます。OpenAI APIキーはバックエンド側でのみ管理し、フロントエンドには公開しません。
+FastAPIバックエンドと連携し、チャット、文章要約、PDF要約を1つの画面から操作できます。PDF要約では、長文PDFを安全に扱うためのファイルサイズ制限、処理状態表示、処理メタ情報の可視化に対応しています。
 
-## Features
+OpenAI APIキーはバックエンド側でのみ管理し、フロントエンドには公開しない構成です。
+
+## スクリーンショット
+
+### チャットモード
+
+![チャットモード](public/screenshots/chat-mode.png)
+
+### PDF要約モード
+
+![PDF要約モード](public/screenshots/pdf-summary-mode.png)
+
+### 処理メタ情報の表示
+
+![処理メタ情報の表示](public/screenshots/metadata-view.png)
+
+## 主な機能
 
 - チャットモード
-- テキスト要約モード
+- 文章要約モード
 - PDF要約モード
-- PDFアップロード
-- PDFファイルサイズの事前チェック
-- Backendから返された標準APIレスポンスの表示
-- エラーメッセージ表示
-- ローディングスピナー表示
+- PDFアップロードと自動要約
+- 10MB超過PDFの事前ブロック
+- PDFファイル名とサイズの表示
+- AI回答のコピー
+- PDF要約結果のTXT保存
+- チャット履歴クリア
+- サンプル入力
+- 過去入力の再入力
+- 処理メタ情報表示
+- APIエラー表示
+- 処理中の二重操作防止
 
-## Tech Stack
+## UI/UX改善
 
-- Next.js 15
-- React 19
-- TypeScript
-- Tailwind CSS
-- Fetch API
+このアプリでは、生成AIアプリとして使いやすく見えるようにUIを改善しています。
 
-## Architecture
+- `/` から `/chat` へリダイレクト
+- アプリ名、説明、技術ラベルを含むヘッダー
+- チャット / 文章要約 / PDF要約のセグメント型モード切替
+- モード別の空状態、placeholder、ローディング文言
+- user / assistant / error のメッセージ表示分離
+- PDFアップロード専用パネル
+- ファイルサイズ上限とエラーの明示
+- disabled / hover / focus 状態の整理
+- `dangerouslySetInnerHTML` を使わない安全なテキスト表示
 
-```text
-Browser
-   |
-   v
-Next.js Frontend
-   |
-   | NEXT_PUBLIC_API_URL
-   v
-FastAPI Backend
-   |
-   v
-OpenAI API
-```
+## AI処理の見える化
 
-## Backend Integration
+バックエンドから返される `data.meta` を使い、AI処理の情報を画面上に表示します。
 
-Frontendは以下の環境変数を使ってFastAPI Backendへリクエストします。
+チャット・文章要約では、主に以下を表示します。
 
-`.env.local`
+- 処理時間
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
+PDF要約では、以下の情報を表示します。
 
-末尾にスラッシュ `/` は付けません。
+- 処理時間
+- PDFサイズ
+- 抽出文字数
+- チャンク数
+- OpenAI API呼び出し回数
 
-## API Response Handling
+これにより、長文PDFをチャンク分割して処理していることが、ユーザーにも分かる画面になっています。
 
-Backendは以下の標準形式でレスポンスを返します。
+## APIレスポンス形式
+
+バックエンドは標準化されたJSONレスポンスを返します。
 
 成功時:
 
@@ -61,7 +79,16 @@ Backendは以下の標準形式でレスポンスを返します。
 {
   "success": true,
   "data": {
-    "message": "要約またはチャット応答本文"
+    "message": "AIからの回答または要約結果",
+    "meta": {
+      "mode": "pdf-summary",
+      "elapsed_ms": 12345,
+      "file_size_bytes": 1048576,
+      "extracted_text_chars": 42000,
+      "chunk_count": 12,
+      "max_chunks": 20,
+      "openai_call_count": 13
+    }
   },
   "error": null
 }
@@ -80,64 +107,96 @@ Backendは以下の標準形式でレスポンスを返します。
 }
 ```
 
-Frontendでは `data.message` または `error.message` を表示します。
+フロントエンドでは `data.message` をメッセージ本文として表示し、`data.meta` が存在する場合は処理情報として表示します。
 
-## PDF Upload Guard
+## コンポーネント設計
 
-Frontend側でも、10MBを超えるPDFはバックエンドへ送信する前にブロックします。
-
-```text
-Max PDF file size: 10MB
-```
-
-これにより、大容量PDFを送信してバックエンド処理が重くなる前に、ユーザーへ分かりやすいエラーを表示します。
-
-## Directory Structure
+肥大化していた `src/app/chat/page.tsx` を分割し、状態管理と表示責務を整理しています。
 
 ```text
-chat-summary-app/
-├── public/
-├── src/
-│   └── app/
-│       ├── chat/
-│       │   └── page.tsx
-│       ├── globals.css
-│       ├── layout.tsx
-│       └── page.tsx
-├── package.json
-├── package-lock.json
-├── next.config.ts
-├── tsconfig.json
-└── README.md
+src/app/chat/
+├─ page.tsx
+├─ types.ts
+├─ constants.ts
+├─ utils.ts
+└─ components/
+   ├─ ModeSelector.tsx
+   ├─ MessageList.tsx
+   ├─ MessageBubble.tsx
+   ├─ PdfUploadPanel.tsx
+   └─ ChatInput.tsx
 ```
 
-## Main Files
+各ファイルの主な責務:
 
 | File | Responsibility |
 | --- | --- |
-| `src/app/chat/page.tsx` | チャットUI、モード切替、PDFアップロード、APIレスポンス表示 |
-| `src/app/layout.tsx` | Next.js App Routerの共通レイアウト |
-| `src/app/globals.css` | Tailwind CSSとグローバルスタイル |
-| `package.json` | scriptsと依存関係 |
+| `page.tsx` | 状態管理、API呼び出し、画面全体の組み立て |
+| `types.ts` | 共通型定義 |
+| `constants.ts` | モード定義、PDFサイズ上限 |
+| `utils.ts` | APIレスポンス変換、ファイル名生成、表示用フォーマット |
+| `ModeSelector.tsx` | モード切替UI |
+| `MessageList.tsx` | メッセージ一覧、空状態、ローディング表示 |
+| `MessageBubble.tsx` | メッセージ単体表示、コピー、TXT保存、再入力、メタ情報表示 |
+| `PdfUploadPanel.tsx` | PDFアップロードUI、ファイル情報、アップロードエラー表示 |
+| `ChatInput.tsx` | テキスト入力、サンプル入力、送信ボタン |
 
-## Local Setup
+## システム構成
+
+```text
+Browser
+   |
+   v
+Next.js Frontend
+   |
+   | NEXT_PUBLIC_API_URL
+   v
+FastAPI Backend
+   |
+   v
+OpenAI API
+```
+
+## 使用技術
+
+- Next.js 15
+- React 19
+- TypeScript
+- Tailwind CSS
+- Fetch API
+
+## セットアップ
 
 Windows PowerShellでの起動例です。
 
 ```powershell
 cd C:\dev\GItHub\fastapi_app\chat-summary-app
 npm install
-Set-Content -Path .env.local -Value "NEXT_PUBLIC_API_URL=http://localhost:8000" -Encoding ascii
+```
+
+`.env.local` を作成します。
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+Frontendを起動します。
+
+```powershell
 npm run dev
 ```
 
-起動後:
+ブラウザで開きます。
 
 ```text
 http://localhost:3000/chat
 ```
 
-Backendも別ターミナルで起動しておきます。
+`/` にアクセスした場合も `/chat` へリダイレクトされます。
+
+## Backend起動
+
+別ターミナルでFastAPIバックエンドを起動します。
 
 ```powershell
 cd C:\dev\GItHub\fastapi_app\fastapi-gpt-app
@@ -145,36 +204,57 @@ cd C:\dev\GItHub\fastapi_app\fastapi-gpt-app
 uvicorn main:app --reload
 ```
 
-## Development Note
+バックエンド側では `.env` に `OPENAI_API_KEY` が必要です。
 
-Codexサイドパネルなどで `npm` が認識されない場合は、Node.jsのPATHが通っていない可能性があります。すでに `node_modules` が存在する場合は、Node.jsからNext.jsを直接起動できます。
+```env
+OPENAI_API_KEY=your_openai_api_key
+```
+
+## npmが認識されない場合
+
+Codexのサイドパネルなどで `npm` がPATHにない場合は、既に `node_modules` がある環境で以下のようにNext.jsを直接起動できます。
 
 ```powershell
 cd C:\dev\GItHub\fastapi_app\chat-summary-app
 & "C:\Users\gan01\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe" .\node_modules\next\dist\bin\next dev
 ```
 
-## Operation Check
+## 動作確認項目
 
-- チャットモードで応答が表示される
-- テキスト要約モードで要約が表示される
-- PDF要約モードで短いPDFが要約される
-- 10MB超PDFでエラーが表示される
-- Backend停止時に通信エラーが表示される
+- `/chat` が表示される
+- `/` から `/chat` に遷移する
+- チャットモードでAI回答が表示される
+- 文章要約モードで要約結果が表示される
+- PDF要約モードでPDFをアップロードできる
+- 10MB超過PDFでエラーが表示される
+- PDFファイル名とサイズが表示される
+- 処理メタ情報が表示される
+- AI回答をコピーできる
+- PDF要約結果をTXT保存できる
+- 履歴クリアできる
+- サンプル入力できる
+- 過去入力を再入力できる
+- Backend停止時に接続エラーが表示される
 
-## Portfolio Highlights
+## ポートフォリオでのアピールポイント
 
-- Next.jsからFastAPI Backendを呼び出すフロントエンド実装
+- Next.jsからFastAPI Backendを呼び出す生成AIアプリ
 - OpenAI APIキーをFrontendに持たせない安全な構成
-- Backendの標準APIレスポンス `success / data / error` に対応
-- PDFアップロード前のファイルサイズチェック
-- ユーザーに分かりやすいエラー表示とローディング表示
+- チャット、文章要約、PDF要約の3モード対応
+- 長文PDFをチャンク分割して要約するBackendと連携
+- PDFサイズ制限、テキスト量制限、チャンク数制限に対応
+- APIレスポンス形式を `success / data / error` に統一
+- 処理メタ情報を表示し、AI処理の透明性を向上
+- AI出力のコピー、TXT保存、再入力など再利用性を強化
+- UI/UX改善により、実用アプリとしての操作性を向上
+- コンポーネント分割により、保守性と拡張性を改善
 
-## Future Improvements
+## 今後の改善予定
 
-- PDFファイル名・サイズの表示
-- 要約中の詳細ステータス表示
-- 要約スタイル選択
-- 要約結果のコピー・ダウンロード
-- PDF内容への質問機能
-- UIデザインの改善
+- PDFドラッグ&ドロップ対応
+- PDF要約の進捗表示強化
+- チャット履歴の永続化
+- 処理メタ情報の詳細表示切替
+- コンポーネントのテスト追加
+- BackendのCORS設定を本番向けに制限
+- デプロイ手順の整備
