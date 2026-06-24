@@ -1,5 +1,7 @@
 export type Mode = "chat" | "text-summary" | "pdf-summary";
 
+export type BackendStatus = "checking" | "waking" | "ready" | "error";
+
 export type ResponseMeta = {
   mode?: Mode;
   elapsed_ms?: number;

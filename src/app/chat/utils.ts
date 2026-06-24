@@ -1,5 +1,26 @@
 import type { ApiResponse, ApiResult } from "./types";
 
+export const sleep = (ms: number) =>
+  new Promise((resolve) => window.setTimeout(resolve, ms));
+
+export const fetchWithTimeout = async (
+  input: RequestInfo | URL,
+  timeoutMs: number,
+  init?: RequestInit
+) => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+};
+
 export const formatFileSize = (bytes: number) => {
   const sizeInMb = bytes / (1024 * 1024);
   return `${sizeInMb.toFixed(2)} MB`;

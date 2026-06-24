@@ -2,6 +2,10 @@ import type { Mode, ModeOption } from "./types";
 
 export const MAX_PDF_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
+export const BACKEND_HEALTH_CHECK_TIMEOUT_MS = 5000;
+export const BACKEND_HEALTH_CHECK_INTERVAL_MS = 3000;
+export const BACKEND_HEALTH_CHECK_MAX_WAIT_MS = 90000;
+
 export const modeOptions: Record<Mode, ModeOption> = {
   chat: {
     label: "チャット",

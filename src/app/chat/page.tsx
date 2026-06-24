@@ -1,12 +1,19 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BackendWakePanel } from "./components/BackendWakePanel";
 import { ChatInput } from "./components/ChatInput";
 import { MessageList } from "./components/MessageList";
 import { ModeSelector } from "./components/ModeSelector";
 import { PdfUploadPanel } from "./components/PdfUploadPanel";
-import { MAX_PDF_FILE_SIZE_BYTES, modeOptions } from "./constants";
-import type { Message, Mode, PdfFileInfo } from "./types";
-import { createDownloadFileName, readApiResponse } from "./utils";
+import {
+  BACKEND_HEALTH_CHECK_INTERVAL_MS,
+  BACKEND_HEALTH_CHECK_MAX_WAIT_MS,
+  BACKEND_HEALTH_CHECK_TIMEOUT_MS,
+  MAX_PDF_FILE_SIZE_BYTES,
+  modeOptions,
+} from "./constants";
+import type { ApiResponse, BackendStatus, Message, Mode, PdfFileInfo } from "./types";
+import { createDownloadFileName, fetchWithTimeout, readApiResponse, sleep } from "./utils";
 
 export default function ChatPage() {
   const [input, setInput] = useState("");
@@ -17,15 +24,96 @@ export default function ChatPage() {
   const [pdfFileInfo, setPdfFileInfo] = useState<PdfFileInfo | null>(null);
   const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
   const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>("checking");
+  const [backendCheckStartedAt, setBackendCheckStartedAt] = useState<number | null>(null);
+  const [backendElapsedSeconds, setBackendElapsedSeconds] = useState(0);
+  const [backendRetryCount, setBackendRetryCount] = useState(0);
+  const [backendErrorMessage, setBackendErrorMessage] = useState<string | null>(null);
+  const backendCheckRunRef = useRef(0);
   const currentMode = modeOptions[mode];
+  const isBackendReady = backendStatus === "ready";
   const canClearHistory =
     messages.length > 0 || input.trim() !== "" || pdfFileInfo !== null || pdfUploadError !== null;
+
+  const startBackendCheck = useCallback(async () => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const runId = backendCheckRunRef.current + 1;
+    const startedAt = Date.now();
+
+    backendCheckRunRef.current = runId;
+    setBackendStatus("checking");
+    setBackendCheckStartedAt(startedAt);
+    setBackendElapsedSeconds(0);
+    setBackendRetryCount(0);
+    setBackendErrorMessage(null);
+
+    if (!apiUrl) {
+      setBackendStatus("error");
+      setBackendErrorMessage("API URLが設定されていません。NEXT_PUBLIC_API_URLを確認してください。");
+      return;
+    }
+
+    while (
+      backendCheckRunRef.current === runId &&
+      Date.now() - startedAt < BACKEND_HEALTH_CHECK_MAX_WAIT_MS
+    ) {
+      try {
+        const res = await fetchWithTimeout(
+          `${apiUrl}/health`,
+          BACKEND_HEALTH_CHECK_TIMEOUT_MS,
+          {
+            cache: "no-store",
+          }
+        );
+        const data = (await res.json()) as ApiResponse;
+
+        if (res.ok && data.success === true) {
+          setBackendStatus("ready");
+          setBackendErrorMessage(null);
+          return;
+        }
+      } catch (error) {
+        console.error("Backend health check failed.", error);
+      }
+
+      if (backendCheckRunRef.current !== runId) return;
+
+      setBackendStatus("waking");
+      setBackendRetryCount((current) => current + 1);
+      await sleep(BACKEND_HEALTH_CHECK_INTERVAL_MS);
+    }
+
+    if (backendCheckRunRef.current === runId) {
+      setBackendStatus("error");
+      setBackendErrorMessage("時間をおいて再試行してください。");
+    }
+  }, []);
+
+  useEffect(() => {
+    startBackendCheck();
+
+    return () => {
+      backendCheckRunRef.current += 1;
+    };
+  }, [startBackendCheck]);
+
+  useEffect(() => {
+    if (!backendCheckStartedAt || isBackendReady) return;
+
+    const intervalId = window.setInterval(() => {
+      setBackendElapsedSeconds(
+        Math.floor((Date.now() - backendCheckStartedAt) / 1000)
+      );
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [backendCheckStartedAt, isBackendReady]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const trimmedInput = input.trim();
-    if (!trimmedInput || isLoading) return;
+    if (!trimmedInput || isLoading || !isBackendReady) return;
 
     const newUserMessage: Message = { role: "user", content: trimmedInput, mode };
     const updatedMessages = [...messages, newUserMessage];
@@ -75,7 +163,7 @@ export default function ChatPage() {
 
   const handlePDFUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (!selectedFile || isLoading) return;
+    if (!selectedFile || isLoading || !isBackendReady) return;
 
     setPdfUploadError(null);
 
@@ -200,7 +288,11 @@ export default function ChatPage() {
                   {currentMode.label}モード
                 </h2>
                 <p className="mt-1 text-xs text-slate-500">
-                  {isLoading ? currentMode.loadingText : currentMode.emptyDescription}
+                  {isLoading
+                    ? currentMode.loadingText
+                    : isBackendReady
+                      ? currentMode.emptyDescription
+                      : "バックエンドの起動を待っています。"}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
@@ -219,37 +311,49 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <MessageList
-            messages={messages}
-            currentMode={currentMode}
-            isLoading={isLoading}
-            messagesEndRef={messagesEndRef}
-            copiedMessageIndex={copiedMessageIndex}
-            onCopyMessage={handleCopyMessage}
-            onDownloadMessage={handleDownloadMessage}
-            onReuseMessage={handleReuseMessage}
-          />
-
-          <div className="border-t border-slate-200 bg-white p-4">
-            {mode === "pdf-summary" ? (
-              <PdfUploadPanel
-                isLoading={isLoading}
-                pdfFileInfo={pdfFileInfo}
-                pdfUploadError={pdfUploadError}
-                onPDFUpload={handlePDFUpload}
-              />
-            ) : (
-              <ChatInput
-                input={input}
+          {isBackendReady ? (
+            <>
+              <MessageList
+                messages={messages}
                 currentMode={currentMode}
                 isLoading={isLoading}
-                onChangeInput={setInput}
-                onSubmit={handleSubmit}
-                onKeyDown={handleKeyDown}
-                onUseSampleInput={handleUseSampleInput}
+                messagesEndRef={messagesEndRef}
+                copiedMessageIndex={copiedMessageIndex}
+                onCopyMessage={handleCopyMessage}
+                onDownloadMessage={handleDownloadMessage}
+                onReuseMessage={handleReuseMessage}
               />
-            )}
-          </div>
+
+              <div className="border-t border-slate-200 bg-white p-4">
+                {mode === "pdf-summary" ? (
+                  <PdfUploadPanel
+                    isLoading={isLoading}
+                    pdfFileInfo={pdfFileInfo}
+                    pdfUploadError={pdfUploadError}
+                    onPDFUpload={handlePDFUpload}
+                  />
+                ) : (
+                  <ChatInput
+                    input={input}
+                    currentMode={currentMode}
+                    isLoading={isLoading}
+                    onChangeInput={setInput}
+                    onSubmit={handleSubmit}
+                    onKeyDown={handleKeyDown}
+                    onUseSampleInput={handleUseSampleInput}
+                  />
+                )}
+              </div>
+            </>
+          ) : (
+            <BackendWakePanel
+              status={backendStatus}
+              elapsedSeconds={backendElapsedSeconds}
+              retryCount={backendRetryCount}
+              errorMessage={backendErrorMessage}
+              onRetry={startBackendCheck}
+            />
+          )}
         </section>
       </div>
     </main>
